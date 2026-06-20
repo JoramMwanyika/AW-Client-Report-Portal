@@ -258,8 +258,15 @@ def export_to_canva(report_id):
         else:
             pdf_generator.generate_tcc_pdf(filepath, client, report_details)
             
-        # Upload the PDF to a temporary public host
-        public_pdf_url = upload_to_temp_host(filepath)
+        # Check if the request is coming from localhost
+        is_localhost = 'localhost' in request.host or '127.0.0.1' in request.host
+        
+        if is_localhost:
+            # Upload the PDF to a temporary public host so Canva can access it
+            public_pdf_url = upload_to_temp_host(filepath)
+        else:
+            # Use our own public URL directly on production (e.g. Railway)
+            public_pdf_url = f"{request.host_url.rstrip('/')}/api/reports/{report_id}/download/{report_type}"
         
         if public_pdf_url:
             canva_import_url = f"https://www.canva.com/folder/upload?file_url={public_pdf_url}"
@@ -268,7 +275,7 @@ def export_to_canva(report_id):
                 "canva_url": canva_import_url
             }), 200
         else:
-            return jsonify({"error": "Failed to upload report to temporary public host for Canva"}), 500
+            return jsonify({"error": "Failed to generate public URL for Canva import"}), 500
             
     except Exception as e:
         return jsonify({"error": str(e)}), 500
