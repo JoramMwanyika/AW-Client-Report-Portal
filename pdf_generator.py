@@ -120,49 +120,18 @@ def draw_arrow(c, x1, y1, x2, y2, color=COLOR_TEXT_MUTED, thickness=2, with_x=Fa
         c.line(mx - r, my - r, mx + r, my + r)
         c.line(mx - r, my + r, mx + r, my - r)
 
-def draw_elbow_arrow(c, x1, y1, x2, y2, color, thickness=1, arrow_size=6):
-    c.setStrokeColor(color)
-    c.setLineWidth(thickness)
-    c.setFillColor(color)
-    
-    mid_y = y1 - (y1 - y2) / 2
-    c.line(x1, y1, x1, mid_y)
-    c.line(x1, mid_y, x2, mid_y)
-    c.line(x2, mid_y, x2, y2)
-    
-    # Draw arrow head pointing down
-    c.path = c.beginPath()
-    c.path.moveTo(x2 - arrow_size/2, y2 + arrow_size)
-    c.path.lineTo(x2 + arrow_size/2, y2 + arrow_size)
-    c.path.lineTo(x2, y2)
-    c.drawPath(c.path, stroke=0, fill=1)
-
-def draw_straight_arrow(c, x1, y1, x2, y2, color, thickness=1, arrow_size=6):
-    c.setStrokeColor(color)
-    c.setLineWidth(thickness)
-    c.setFillColor(color)
-    c.line(x1, y1, x2, y2)
-    
-    # Draw right pointing arrow head
-    c.path = c.beginPath()
-    c.path.moveTo(x2 - arrow_size, y2 + arrow_size/2)
-    c.path.lineTo(x2 - arrow_size, y2 - arrow_size/2)
-    c.path.lineTo(x2, y2)
-    c.drawPath(c.path, stroke=0, fill=1)
-
 def generate_sacs_pdf(filepath, client, report):
-    """Generates the Simple Automated Cash Flow System (SACS) PDF report with premium design."""
+    """Generates the Simple Automated Cash Flow System (SACS) PDF report."""
+    # Setup Canvas
     c = canvas.Canvas(filepath, pagesize=letter)
     width, height = letter # 612, 792
     
-    # Background
-    c.setFillColor(colors.HexColor('#F8FAFC'))
-    c.rect(0, 0, width, height, fill=1, stroke=0)
-    
+    # Client Name mapping
     client_name = f"{client['client1_first_name']} {client['client1_last_name']}"
     if client.get('client2_first_name'):
         client_name += f" & {client['client2_first_name']} {client['client2_last_name']}"
         
+    # Math calculations
     inflow = client['monthly_salary']
     outflow = client['agreed_expense_budget']
     excess = inflow - outflow
@@ -176,109 +145,67 @@ def generate_sacs_pdf(filepath, client, report):
     # Page 1: Cashflow Visual Diagram
     draw_header(c, "SIMPLE AUTOMATED CASH FLOW SYSTEM (SACS)", client_name, report['report_date'], report['quarter'])
     
-    # Define Layout Metrics
-    card_w = 180
-    card_h = 90
-    in_x, in_y = 60, 480
-    out_x, out_y = 372, 480
-    pr_x, pr_y = 216, 260
+    # Draw Inflow Bubble (Green, Left)
+    cx_in, cy_in = 130, 480
+    c.setFillColor(COLOR_INFLOW_GREEN)
+    c.circle(cx_in, cy_in, 60, stroke=0, fill=1)
+    c.setFillColor(COLOR_WHITE)
+    c.setFont("Helvetica-Bold", 12)
+    c.drawCentredString(cx_in, cy_in + 15, "INFLOW")
+    c.setFont("Helvetica", 9)
+    c.drawCentredString(cx_in, cy_in - 2, "Monthly Salary")
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(cx_in, cy_in - 22, format_currency(inflow))
     
-    # Connection logic (draw first so they are behind cards)
-    line_col = colors.HexColor('#94A3B8')
+    # Draw Outflow Bubble (Red, Right)
+    cx_out, cy_out = 482, 480
+    c.setFillColor(COLOR_OUTFLOW_RED)
+    c.circle(cx_out, cy_out, 60, stroke=0, fill=1)
+    c.setFillColor(COLOR_WHITE)
+    c.setFont("Helvetica-Bold", 12)
+    c.drawCentredString(cx_out, cy_out + 15, "OUTFLOW")
+    c.setFont("Helvetica", 9)
+    c.drawCentredString(cx_out, cy_out - 2, "Agreed Expenses")
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(cx_out, cy_out - 22, format_currency(outflow))
     
-    # Arrow from Inflow to Outflow
-    # From right edge of inflow to left edge of outflow
-    draw_straight_arrow(c, in_x + card_w, in_y + card_h/2, out_x, out_y + card_h/2, line_col, 2, 8)
+    # Draw Private Reserve Bubble (Blue, Bottom Center)
+    cx_pr, cy_pr = 306, 260
+    c.setFillColor(COLOR_RESERVE_BLUE)
+    c.circle(cx_pr, cy_pr, 70, stroke=0, fill=1)
+    c.setFillColor(COLOR_WHITE)
+    c.setFont("Helvetica-Bold", 12)
+    c.drawCentredString(cx_pr, cy_pr + 25, "PRIVATE RESERVE")
+    c.setFont("Helvetica", 9)
+    c.drawCentredString(cx_pr, cy_pr + 5, "(Monthly Savings)")
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(cx_pr, cy_pr - 18, format_currency(excess))
+    c.setFont("Helvetica", 8)
+    c.drawCentredString(cx_pr, cy_pr - 34, "Transferred Automatically")
+    
+    # Draw Connecting Arrows
+    # Inflow -> Outflow (Red arrow with X in middle)
+    draw_arrow(c, cx_in + 60, cy_in, cx_out - 60, cy_out, color=COLOR_OUTFLOW_RED, thickness=3, with_x=True)
     c.setFillColor(COLOR_PRIMARY_NAVY)
     c.setFont("Helvetica-Bold", 10)
-    c.drawCentredString((in_x + card_w + out_x)/2, in_y + card_h/2 + 10, f"Agreed Budget: {format_currency(outflow)} / mo")
+    c.drawCentredString(306, cy_in + 15, f"Agreed Budget: {format_currency(outflow)} / mo")
     
-    # Arrow from Inflow to PR (bottom edge to top edge)
-    draw_elbow_arrow(c, in_x + card_w/2, in_y, pr_x + card_w/4, pr_y + card_h, colors.HexColor('#10B981'), 2, 8)
+    # Inflow/Outflow Path -> Private Reserve
+    # Let's draw diagonal arrows pointing to Private Reserve from both
+    # A beautiful arrow from the bottom edge of Inflow to top edge of Private Reserve
+    # Inflow edge at (cx_in + 35, cy_in - 48) -> PR edge at (cx_pr - 35, cy_pr + 60)
+    draw_arrow(c, cx_in + 45, cy_in - 40, cx_pr - 50, cy_pr + 50, color=COLOR_RESERVE_BLUE, thickness=3, with_x=False)
+    c.setFillColor(COLOR_RESERVE_BLUE)
+    c.setFont("Helvetica-Bold", 10)
     
-    # Arrow from Outflow to PR (bottom edge to top edge)
-    draw_elbow_arrow(c, out_x + card_w/2, out_y, pr_x + (card_w*3)/4, pr_y + card_h, colors.HexColor('#F59E0B'), 2, 8)
-
-    # Inflow Card
-    draw_shadow_rect(c, in_x, in_y, card_w, card_h, 8, 3, -3, 0.08)
-    c.setFillColor(COLOR_WHITE)
-    c.setStrokeColor(colors.HexColor('#E2E8F0'))
-    c.roundRect(in_x, in_y, card_w, card_h, 8, fill=1, stroke=1)
-    
-    # Green accent strip
-    c.setFillColor(colors.HexColor('#10B981'))
-    c.path = c.beginPath()
-    c.path.moveTo(in_x + 6, in_y)
-    c.path.lineTo(in_x, in_y)
-    c.path.lineTo(in_x, in_y + card_h)
-    c.path.lineTo(in_x + 6, in_y + card_h)
-    c.drawPath(c.path, stroke=0, fill=1)
-    
-    c.setFillColor(COLOR_PRIMARY_NAVY)
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(in_x + 16, in_y + card_h - 22, "INFLOW")
-    c.setFont("Helvetica", 9)
-    c.setFillColor(COLOR_TEXT_MUTED)
-    c.drawString(in_x + 16, in_y + card_h - 38, "Monthly Salary")
-    c.setFont("Helvetica-Bold", 16)
-    c.setFillColor(COLOR_PRIMARY_NAVY)
-    c.drawString(in_x + 16, in_y + 20, format_currency(inflow))
-    
-    # Outflow Card
-    draw_shadow_rect(c, out_x, out_y, card_w, card_h, 8, 3, -3, 0.08)
-    c.setFillColor(COLOR_WHITE)
-    c.roundRect(out_x, out_y, card_w, card_h, 8, fill=1, stroke=1)
-    
-    # Amber/Red accent strip
-    c.setFillColor(colors.HexColor('#EF4444'))
-    c.path = c.beginPath()
-    c.path.moveTo(out_x + 6, out_y)
-    c.path.lineTo(out_x, out_y)
-    c.path.lineTo(out_x, out_y + card_h)
-    c.path.lineTo(out_x + 6, out_y + card_h)
-    c.drawPath(c.path, stroke=0, fill=1)
-    
-    c.setFillColor(COLOR_PRIMARY_NAVY)
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(out_x + 16, out_y + card_h - 22, "OUTFLOW")
-    c.setFont("Helvetica", 9)
-    c.setFillColor(COLOR_TEXT_MUTED)
-    c.drawString(out_x + 16, out_y + card_h - 38, "Agreed Expenses")
-    c.setFont("Helvetica-Bold", 16)
-    c.setFillColor(COLOR_PRIMARY_NAVY)
-    c.drawString(out_x + 16, out_y + 20, format_currency(outflow))
-    
-    # Private Reserve Card (Centered)
-    draw_shadow_rect(c, pr_x, pr_y, card_w, card_h + 10, 8, 3, -3, 0.1)
-    c.setFillColor(COLOR_WHITE)
-    c.roundRect(pr_x, pr_y, card_w, card_h + 10, 8, fill=1, stroke=1)
-    
-    # Blue accent strip
-    c.setFillColor(colors.HexColor('#3B82F6'))
-    c.path = c.beginPath()
-    c.path.moveTo(pr_x + 6, pr_y)
-    c.path.lineTo(pr_x, pr_y)
-    c.path.lineTo(pr_x, pr_y + card_h + 10)
-    c.path.lineTo(pr_x + 6, pr_y + card_h + 10)
-    c.drawPath(c.path, stroke=0, fill=1)
-    
-    c.setFillColor(COLOR_PRIMARY_NAVY)
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(pr_x + 16, pr_y + card_h - 12, "PRIVATE RESERVE")
-    c.setFont("Helvetica", 9)
-    c.setFillColor(COLOR_TEXT_MUTED)
-    c.drawString(pr_x + 16, pr_y + card_h - 28, "(Monthly Savings Goal)")
-    c.setFont("Helvetica-Bold", 20)
-    c.setFillColor(colors.HexColor('#059669')) # Emerald highlight
-    c.drawString(pr_x + 16, pr_y + 30, format_currency(excess))
-    c.setFont("Helvetica-Bold", 8)
-    c.setFillColor(colors.HexColor('#3B82F6'))
-    c.drawString(pr_x + 16, pr_y + 12, "Transferred Automatically")
+    # Draw text: Monthly Excess
+    c.drawString(135, 345, "Monthly Excess Cash")
+    c.drawString(135, 330, format_currency(excess))
     
     # Explanatory caption
     c.setFillColor(COLOR_PRIMARY_NAVY)
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(36, 160, "System Overview & Operation:")
+    c.drawString(36, 130, "System Overview & Operation:")
     c.setFont("Helvetica", 10)
     c.setFillColor(COLOR_TEXT_MUTED)
     desc_text = (
@@ -288,7 +215,7 @@ def generate_sacs_pdf(filepath, client, report):
         "leaving a safety buffer. All excess cash flow is swept automatically into the Private Reserve "
         "high-yield savings bucket to fund mid-term savings goals and build the cash cushion."
     )
-    draw_wrapped_text(c, desc_text, 36, 140, 540, 15, font_size=9, align="left")
+    draw_wrapped_text(c, desc_text, 36, 110, 540, 14, font_size=9, align="left")
     
     # Page Footer
     c.setFont("Helvetica", 8)
@@ -299,24 +226,16 @@ def generate_sacs_pdf(filepath, client, report):
     # ------------------ PAGE 2 ------------------
     c.showPage()
     
-    # Background
-    c.setFillColor(colors.HexColor('#F8FAFC'))
-    c.rect(0, 0, width, height, fill=1, stroke=0)
-    
     draw_header(c, "PRIVATE RESERVE SUMMARY & LIQUID ASSETS", client_name, report['report_date'], report['quarter'])
     
     # Calculation Box (Target Reserve)
-    draw_shadow_rect(c, 36, 440, 260, 220, 8, 3, -3, 0.08)
-    c.setFillColor(COLOR_WHITE)
-    c.setStrokeColor(colors.HexColor('#E2E8F0'))
+    c.setFillColor(COLOR_BG_CARD)
     c.roundRect(36, 440, 260, 220, 8, fill=1, stroke=1)
+    c.setStrokeColor(COLOR_BORDER)
     
-    c.setFillColor(colors.HexColor('#3B82F6')) # Blue top bar
-    c.roundRect(36, 640, 260, 20, 4, fill=1, stroke=0)
-    c.rect(36, 640, 260, 10, fill=1, stroke=0)
-    c.setFillColor(COLOR_WHITE)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(50, 646, "TARGET RESERVE CALCULATION")
+    c.setFillColor(COLOR_PRIMARY_NAVY)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(50, 640, "Target Private Reserve Calculation")
     
     c.setFont("Helvetica", 9)
     c.setFillColor(COLOR_TEXT_MUTED)
@@ -326,20 +245,22 @@ def generate_sacs_pdf(filepath, client, report):
     # Itemized Deductibles
     c.drawString(50, 580, "Auto Insurance Deductible")
     c.drawRightString(280, 580, format_currency(client['deductible_auto']))
-    c.drawString(50, 560, "Homeowners Deductible")
+    
+    c.drawString(50, 560, "Homeowners Insurance Deductible")
     c.drawRightString(280, 560, format_currency(client['deductible_home']))
+    
     c.drawString(50, 540, "Health Insurance Deductible")
     c.drawRightString(280, 540, format_currency(client['deductible_health']))
-    c.drawString(50, 520, "Other Deductibles")
+    
+    c.drawString(50, 520, "Other Insurance Deductible")
     c.drawRightString(280, 520, format_currency(client['deductible_other']))
     
-    c.setStrokeColor(colors.HexColor('#E2E8F0'))
+    c.setStrokeColor(COLOR_BORDER)
     c.line(50, 505, 280, 505)
     
     c.setFillColor(COLOR_PRIMARY_NAVY)
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(50, 485, "Total Reserve Target")
-    c.setFillColor(colors.HexColor('#3B82F6'))
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(50, 485, "Total Private Reserve Target")
     c.drawRightString(280, 485, format_currency(pr_target))
     
     c.setFont("Helvetica", 8)
@@ -347,87 +268,74 @@ def generate_sacs_pdf(filepath, client, report):
     c.drawString(50, 455, "*Formula: (6 × Monthly Outflow) + Deductibles")
     
     # Actual Reserves Box (Right)
-    draw_shadow_rect(c, 316, 440, 260, 220, 8, 3, -3, 0.08)
-    c.setFillColor(COLOR_WHITE)
-    c.setStrokeColor(colors.HexColor('#E2E8F0'))
+    c.setFillColor(COLOR_BG_CARD)
     c.roundRect(316, 440, 260, 220, 8, fill=1, stroke=1)
     
-    c.setFillColor(colors.HexColor('#0F172A')) # Navy top bar
-    c.roundRect(316, 640, 260, 20, 4, fill=1, stroke=0)
-    c.rect(316, 640, 260, 10, fill=1, stroke=0)
-    c.setFillColor(COLOR_WHITE)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(330, 646, "ACTUAL RESERVE CUSHION")
+    c.setFillColor(COLOR_PRIMARY_NAVY)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(330, 640, "Actual Reserve Cushion Details")
     
     c.setFont("Helvetica", 9)
     c.setFillColor(COLOR_TEXT_MUTED)
     c.drawString(330, 610, "Current Private Reserve Balance")
-    c.setFillColor(COLOR_PRIMARY_NAVY)
-    c.setFont("Helvetica-Bold", 11)
+    c.setFillColor(COLOR_RESERVE_BLUE)
+    c.setFont("Helvetica-Bold", 10)
     c.drawRightString(560, 610, format_currency(pr_balance))
     
     c.setFont("Helvetica", 9)
     c.setFillColor(COLOR_TEXT_MUTED)
     c.drawString(330, 580, "Private Reserve Target Threshold")
-    c.setFont("Helvetica", 11)
     c.drawRightString(560, 580, format_currency(pr_target))
     
-    c.line(330, 560, 560, 560)
+    c.line(330, 565, 560, 565)
     
     # Net Surplus/Deficit
     c.setFont("Helvetica-Bold", 10)
     c.setFillColor(COLOR_PRIMARY_NAVY)
     if pr_diff >= 0:
-        c.drawString(330, 535, "Surplus Reserve Cushion")
-        c.setFillColor(colors.HexColor('#059669'))
-        c.setFont("Helvetica-Bold", 12)
-        c.drawRightString(560, 535, f"+{format_currency(pr_diff)}")
+        c.drawString(330, 545, "Surplus Reserve Cushion")
+        c.setFillColor(COLOR_INFLOW_GREEN)
+        c.drawRightString(560, 545, f"+{format_currency(pr_diff)}")
         
-        # Status badge (Premium Light Green)
-        c.setFillColor(colors.HexColor('#D1FAE5'))
-        c.roundRect(330, 465, 230, 45, 6, fill=1, stroke=0)
-        c.setFillColor(colors.HexColor('#065F46'))
-        c.setFont("Helvetica-Bold", 11)
-        c.drawCentredString(445, 482, "RESERVES FULLY FUNDED")
+        # Draw status badge
+        c.setFillColor(COLOR_INFLOW_GREEN)
+        c.roundRect(330, 475, 230, 45, 4, fill=1, stroke=0)
+        c.setFillColor(COLOR_WHITE)
+        c.setFont("Helvetica-Bold", 12)
+        c.drawCentredString(445, 492, "RESERVES FULLY FUNDED")
     else:
-        c.drawString(330, 535, "Required Reserve Funding")
-        c.setFillColor(colors.HexColor('#DC2626'))
-        c.setFont("Helvetica-Bold", 12)
-        c.drawRightString(560, 535, format_currency(abs(pr_diff)))
+        c.drawString(330, 545, "Required Reserve Funding")
+        c.setFillColor(COLOR_OUTFLOW_RED)
+        c.drawRightString(560, 545, format_currency(abs(pr_diff)))
         
-        # Status badge (Premium Light Red)
-        c.setFillColor(colors.HexColor('#FEE2E2'))
-        c.roundRect(330, 465, 230, 45, 6, fill=1, stroke=0)
-        c.setFillColor(colors.HexColor('#991B1B'))
-        c.setFont("Helvetica-Bold", 11)
-        c.drawCentredString(445, 482, "FUNDING DEFICIT")
+        # Draw status badge
+        c.setFillColor(COLOR_OUTFLOW_RED)
+        c.roundRect(330, 475, 230, 45, 4, fill=1, stroke=0)
+        c.setFillColor(COLOR_WHITE)
+        c.setFont("Helvetica-Bold", 12)
+        c.drawCentredString(445, 492, "FUNDING DEFICIT")
         
     # Liquid Assets Table (Bottom Half)
     c.setFillColor(COLOR_PRIMARY_NAVY)
     c.setFont("Helvetica-Bold", 12)
-    c.drawString(36, 395, "Total Investment & Liquidity Summary")
+    c.drawString(36, 385, "Total Investment & Liquidity Summary")
+    c.setStrokeColor(COLOR_PRIMARY_NAVY)
+    c.setLineWidth(1.5)
+    c.line(36, 375, 576, 375)
     
-    # Table Box with Shadow
-    draw_shadow_rect(c, 36, 235, 540, 140, 8, 3, -3, 0.08)
-    c.setFillColor(COLOR_WHITE)
-    c.roundRect(36, 235, 540, 140, 8, fill=1, stroke=1)
-    
-    # Table Header Row
-    c.setFillColor(colors.HexColor('#F1F5F9')) # Light grey header row
-    c.roundRect(36, 345, 540, 30, 8, fill=1, stroke=0)
-    c.rect(36, 345, 540, 15, fill=1, stroke=0)
-    
+    # Draw table headers
     c.setFont("Helvetica-Bold", 9)
-    c.setFillColor(colors.HexColor('#475569'))
-    c.drawString(45, 356, "ASSET GROUP")
-    c.drawString(200, 356, "INSTITUTION & DETAILS")
-    c.drawRightString(420, 356, "CASH BALANCE")
-    c.drawRightString(565, 356, "TOTAL VALUE")
+    c.setFillColor(COLOR_PRIMARY_NAVY)
+    c.drawString(45, 355, "Asset Group")
+    c.drawString(200, 355, "Institution & Details")
+    c.drawRightString(420, 355, "Cash Balance")
+    c.drawRightString(565, 355, "Total Value")
     
-    c.setStrokeColor(colors.HexColor('#E2E8F0'))
-    c.setLineWidth(1)
+    c.setStrokeColor(COLOR_BORDER)
+    c.setLineWidth(0.5)
     c.line(36, 345, 576, 345)
     
+    # Calculate Schwab assets sum
     schwab_total = 0
     schwab_cash = 0
     for bal in report['balances']:
@@ -435,38 +343,33 @@ def generate_sacs_pdf(filepath, client, report):
             schwab_total += bal['balance']
             schwab_cash += bal['cash_balance']
             
+    # Draw Rows
     # Row 1: Private Reserve
-    c.setFillColor(COLOR_PRIMARY_NAVY)
     c.setFont("Helvetica", 9)
-    c.drawString(45, 320, "Private Reserve")
-    c.setFillColor(COLOR_TEXT_MUTED)
-    c.drawString(200, 320, "Pinnacle Bank (Savings)")
-    c.setFillColor(COLOR_PRIMARY_NAVY)
-    c.drawRightString(420, 320, format_currency(pr_balance))
-    c.drawRightString(565, 320, format_currency(pr_balance))
-    c.line(36, 305, 576, 305)
+    c.drawString(45, 325, "Private Reserve")
+    c.drawString(200, 325, "Pinnacle Bank (Savings)")
+    c.drawRightString(420, 325, format_currency(pr_balance))
+    c.drawRightString(565, 325, format_currency(pr_balance))
+    c.line(36, 315, 576, 315)
     
     # Row 2: Schwab Investments
-    c.drawString(45, 280, "Investment Portfolio")
-    c.setFillColor(COLOR_TEXT_MUTED)
-    c.drawString(200, 280, "Charles Schwab (Aggregated Assets)")
-    c.setFillColor(COLOR_PRIMARY_NAVY)
-    c.drawRightString(420, 280, format_currency(schwab_cash))
-    c.drawRightString(565, 280, format_currency(schwab_total))
-    c.line(36, 265, 576, 265)
+    c.drawString(45, 295, "Investment Portfolio")
+    c.drawString(200, 295, "Charles Schwab (Aggregated Assets)")
+    c.drawRightString(420, 295, format_currency(schwab_cash))
+    c.drawRightString(565, 295, format_currency(schwab_total))
+    c.line(36, 285, 576, 285)
     
     # Total row
-    c.setFillColor(colors.HexColor('#F8FAFC'))
-    c.roundRect(36, 235, 540, 30, 8, fill=1, stroke=0)
-    c.rect(36, 265, 540, 15, fill=1, stroke=0)
+    c.setFillColor(COLOR_BG_CARD)
+    c.rect(36, 245, 540, 30, fill=1, stroke=0)
     c.setFillColor(COLOR_PRIMARY_NAVY)
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(45, 246, "Total Liquid Reserve Assets")
-    c.setFillColor(colors.HexColor('#059669')) # Emerald Total
-    c.drawRightString(420, 246, format_currency(pr_balance + schwab_cash))
-    c.drawRightString(565, 246, format_currency(pr_balance + schwab_total))
-    c.setStrokeColor(COLOR_BORDER)
-    c.line(36, 235, 576, 235)
+    c.drawString(45, 255, "Total Liquid Reserve Assets")
+    c.drawRightString(420, 255, format_currency(pr_balance + schwab_cash))
+    c.drawRightString(565, 255, format_currency(pr_balance + schwab_total))
+    c.setStrokeColor(COLOR_PRIMARY_NAVY)
+    c.setLineWidth(1)
+    c.line(36, 245, 576, 245)
     
     # Bottom Advice Notes
     c.setFillColor(COLOR_PRIMARY_NAVY)
