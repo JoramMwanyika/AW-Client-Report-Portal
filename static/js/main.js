@@ -656,69 +656,20 @@ async function viewClientReports(clientId) {
 async function exportToCanva(reportId, type) {
     const btn = event.target;
     const oldText = btn.textContent;
-    btn.textContent = "Exporting...";
+    btn.textContent = "Redirecting...";
     btn.disabled = true;
     
     try {
-        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        // Trigger download programmatically
+        const downloadLink = document.createElement('a');
+        downloadLink.href = `/api/reports/${reportId}/download/${type}`;
+        downloadLink.download = `${type.toUpperCase()}_report.pdf`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
         
-        if (isLocalhost) {
-            // Localhost guidance
-            alert(
-                `Local Server Detected (Localhost):\n\n` +
-                `Because Canva is a cloud service, it cannot connect to your local computer (localhost) directly to fetch the PDF.\n\n` +
-                `We will now:\n` +
-                `1. Download the PDF file directly to your downloads folder.\n` +
-                `2. Open Canva's upload workspace in a new tab.\n\n` +
-                `To edit, just drag and drop the downloaded PDF file into the Canva page!`
-            );
-            
-            // Trigger local download programmatically
-            const downloadLink = document.createElement('a');
-            downloadLink.href = `/api/reports/${reportId}/download/${type}`;
-            downloadLink.download = `${type.toUpperCase()}_report.pdf`;
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-            
-            // Open Canva Upload
-            window.open('https://www.canva.com/upload', '_blank');
-        } else {
-            // Public Server (Direct Cloud Import)
-            if (canvaClientId && typeof Canva !== 'undefined' && Canva.DesignButton) {
-                // Open official Canva Design Button popup editor
-                Canva.DesignButton.create({
-                    apiKey: canvaClientId,
-                    design: {
-                        type: "Document",
-                        media: [
-                            {
-                                url: `${window.location.origin}/api/reports/${reportId}/download/${type}`,
-                                type: "pdf"
-                            }
-                        ]
-                    },
-                    onDesignOpen: function(designId) {
-                        console.log("Design opened in Canva:", designId);
-                    },
-                    onDesignPublish: function(exportUrl, designId) {
-                        alert("Design published successfully from Canva!");
-                        window.open(exportUrl, '_blank');
-                    }
-                });
-            } else {
-                // Fallback to direct redirect link
-                const res = await fetch(`/api/reports/${reportId}/export/canva?type=${type}`, { method: 'POST' });
-                const data = await res.json();
-                
-                if (res.ok) {
-                    alert(`Export link generated successfully!\nCanva Import URL: ${data.canva_url}`);
-                    window.open(data.canva_url, '_blank');
-                } else {
-                    alert(data.error || "Failed to export to Canva");
-                }
-            }
-        }
+        // Open Canva Upload directly for editing
+        window.open('https://www.canva.com/upload', '_blank');
     } catch (err) {
         console.error("Canva export error:", err);
         alert("An error occurred during Canva export.");

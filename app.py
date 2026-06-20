@@ -190,54 +190,5 @@ def download_tcc(report_id):
         return send_file(filepath, as_attachment=True, download_name=filename)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-@app.route('/api/reports/<int:report_id>/export/canva', methods=['POST'])
-def export_to_canva(report_id):
-    try:
-        report_type = request.args.get('type', 'sacs')
-        report_details = database.get_report_details(report_id)
-        if not report_details:
-            return jsonify({"error": "Report not found"}), 404
-            
-        client_data = {
-            'client1_first_name': report_details['client1_first_name'],
-            'client1_last_name': report_details['client1_last_name'],
-            'client1_dob': report_details['client1_dob'],
-            'client1_age': report_details['client1_age'],
-            'client1_ssn_last_4': report_details['client1_ssn_last_4'],
-            'client2_first_name': report_details['client2_first_name'],
-            'client2_last_name': report_details['client2_last_name'],
-            'client2_dob': report_details['client2_dob'],
-            'client2_age': report_details['client2_age'],
-            'client2_ssn_last_4': report_details['client2_ssn_last_4'],
-            'monthly_salary': report_details['monthly_salary'],
-            'agreed_expense_budget': report_details['agreed_expense_budget'],
-            'deductible_auto': report_details['deductible_auto'],
-            'deductible_home': report_details['deductible_home'],
-            'deductible_health': report_details['deductible_health'],
-            'deductible_other': report_details['deductible_other'],
-            'trust_address': report_details['trust_address']
-        }
-        
-        prefix = "SACS" if report_type == 'sacs' else "TCC"
-        filename = f"{prefix}_{report_details['client1_last_name']}_{report_details['quarter']}.pdf"
-        filepath = os.path.join(PDF_STORAGE_DIR, filename)
-        
-        if report_type == 'sacs':
-            pdf_generator.generate_sacs_pdf(filepath, client_data, report_details)
-        else:
-            pdf_generator.generate_tcc_pdf(filepath, client_data, report_details)
-            
-        app_domain = request.host_url.rstrip('/')
-        pdf_url = f"{app_domain}/api/reports/{report_id}/download/{report_type}"
-        canva_import_url = f"https://www.canva.com/folder/upload?file_url={pdf_url}"
-        
-        return jsonify({
-            "message": "Canva link generated successfully",
-            "canva_url": canva_import_url
-        }), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
