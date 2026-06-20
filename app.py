@@ -1,8 +1,10 @@
 import os
 import tempfile
+import re
 import requests
 from flask import Flask, jsonify, request, send_file, render_template, redirect
 from dotenv import load_dotenv
+from werkzeug.middleware.proxy_fix import ProxyFix
 import database
 import pdf_generator
 
@@ -10,6 +12,9 @@ import pdf_generator
 load_dotenv()
 
 app = Flask(__name__)
+
+# Apply ProxyFix middleware to trust headers forwarded by reverse proxies (like Railway's load balancer)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
 
 # Initialize DB on startup
 database.init_db()
@@ -219,6 +224,30 @@ def upload_to_temp_host(filepath):
         print(f"file.io upload failed: {e}")
 
     return None
+def is_public_host(host_header):
+    # Remove port if present
+    host_name = host_header.split(':')[0]
+    
+    # Check if it's localhost or internal loopbacks
+    if host_name in ('localhost', '127.0.0.1', '0.0.0.0'):
+        return False
+        
+    # Check if it is a local private network IP range:
+    # 10.x.x.x, 192.168.x.x, 172.16.x.x to 172.31.x.x
+    private_ip_patterns = [
+        r'^127\.',
+        r'^10\.',
+        r'^192\.168\.',
+        r'^172\.(1[6-9]|2[0-9]|3[0-1])\.'
+    ]
+    if any(re.match(pattern, host_name) for pattern in private_ip_patterns):
+        return False
+        
+    # Check if it is a local domain suffix or contains no dot (single hostname)
+    if host_name.endswith('.local') or '.' not in host_name:
+        return False
+        
+    return True
 
 @app.route('/api/reports/<int:report_id>/export/canva', methods=['GET'])
 def export_to_canva(report_id):
@@ -258,15 +287,13 @@ def export_to_canva(report_id):
         else:
             pdf_generator.generate_tcc_pdf(filepath, client, report_details)
             
-        # Check if the request is coming from localhost
-        is_localhost = 'localhost' in request.host or '127.0.0.1' in request.host
-        
-        if is_localhost:
-            # Upload the PDF to a temporary public host so Canva can access it
-            public_pdf_url = upload_to_temp_host(filepath)
-        else:
-            # Use our own public URL directly on production (e.g. Railway)
+        # Determine if host is public
+        if is_public_host(request.host):
+            # Production: Use the direct public URL served from this application
             public_pdf_url = f"{request.host_url.rstrip('/')}/api/reports/{report_id}/download/{report_type}"
+        else:
+            # Local/Private Network: Upload to temporary public host for Canva server access
+            public_pdf_url = upload_to_temp_host(filepath)
         
         if public_pdf_url:
             canva_import_url = f"https://www.canva.com/folder/upload?file_url={public_pdf_url}"
