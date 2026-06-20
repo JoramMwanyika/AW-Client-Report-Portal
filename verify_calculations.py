@@ -2,6 +2,7 @@ import os
 import shutil
 import database
 import pdf_generator
+#tests
 
 def run_tests():
     print("Initializing test database...")
