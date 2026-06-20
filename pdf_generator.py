@@ -394,11 +394,31 @@ def generate_sacs_pdf(filepath, client, report):
     
     c.save()
 
+def draw_shadow_rect(c, x, y, w, h, radius=6, offset_x=3, offset_y=-3, alpha=0.1):
+    c.saveState()
+    c.setFillColor(colors.HexColor('#94A3B8'))
+    # Simulate simple shadow without opacity by using a very light solid color,
+    # or use fill alpha if supported by reportlab (setStrokeAlpha/setFillAlpha).
+    c.setFillAlpha(alpha)
+    c.roundRect(x + offset_x, y + offset_y, w, h, radius, fill=1, stroke=0)
+    c.restoreState()
+
+def draw_elbow_line(c, x1, y1, x2, y2, color, thickness=1):
+    c.setStrokeColor(color)
+    c.setLineWidth(thickness)
+    # Simple elbow joint: go down halfway, then across, then down
+    mid_y = y1 - (y1 - y2) / 2
+    c.line(x1, y1, x1, mid_y)
+    c.line(x1, mid_y, x2, mid_y)
+    c.line(x2, mid_y, x2, y2)
+
 def generate_tcc_pdf(filepath, client, report):
-    """Generates the Total Client Chart (TCC) Net Worth PDF report."""
-    # TCC is a dense visual map, let's build it as a Landscape page
-    # width = 792 pt, height = 612 pt (landscape)
+    """Generates the Total Client Chart (TCC) Net Worth PDF report with a premium design."""
     c = canvas.Canvas(filepath, pagesize=(792, 612))
+    
+    # Base Premium Background
+    c.setFillColor(colors.HexColor('#F8FAFC'))
+    c.rect(0, 0, 792, 612, fill=1, stroke=0)
     
     # Client Name mapping
     client_name = f"{client['client1_first_name']} {client['client1_last_name']}"
@@ -414,17 +434,17 @@ def generate_tcc_pdf(filepath, client, report):
     c.drawRightString(756, 588, "TOTAL CLIENT CHART (TCC)")
     
     c.setFillColor(COLOR_PRIMARY_NAVY)
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(36, 545, "TOTAL CLIENT NET WORTH CHART")
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(36, 542, "TOTAL CLIENT NET WORTH CHART")
     
-    c.setFont("Helvetica", 9)
+    c.setFont("Helvetica", 10)
     c.setFillColor(COLOR_TEXT_MUTED)
     meta_text = f"Client: {client_name}   |   Period: {report['quarter']}   |   Date: {report['report_date']}"
-    c.drawString(36, 528, meta_text)
+    c.drawString(36, 524, meta_text)
     
-    c.setStrokeColor(COLOR_BORDER)
+    c.setStrokeColor(colors.HexColor('#CBD5E1'))
     c.setLineWidth(1)
-    c.line(36, 520, 756, 520)
+    c.line(36, 514, 756, 514)
     
     # Process account types and balances
     c1_ret_total = 0
@@ -438,10 +458,8 @@ def generate_tcc_pdf(filepath, client, report):
     liabilities_accs = []
     
     for bal in report['balances']:
-        # Sort balances into lists
         bt = bal['type']
         bo = bal['owner']
-        
         if bt == 'Retirement':
             if bo == 'Client 1':
                 c1_ret_accs.append(bal)
@@ -459,276 +477,288 @@ def generate_tcc_pdf(filepath, client, report):
     trust_value = report['trust_zillow_value']
     grand_total_net_worth = c1_ret_total + c2_ret_total + non_ret_total + trust_value
     
-    # --- Client Profile Info Pills (Green) ---
-    c.setFillColor(COLOR_INFLOW_GREEN)
-    c.roundRect(36, 455, 340, 52, 6, fill=1, stroke=0)
+    # --- Client Profile Info Pills (Deep Emerald) ---
+    c.setFillColor(colors.HexColor('#059669'))
+    draw_shadow_rect(c, 36, 445, 340, 56, 8, 2, -2, 0.1)
+    c.roundRect(36, 445, 340, 56, 8, fill=1, stroke=0)
     c.setFillColor(COLOR_WHITE)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(48, 492, f"{client['client1_first_name']} {client['client1_last_name']}")
-    c.setFont("Helvetica", 8)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(48, 484, f"{client['client1_first_name']} {client['client1_last_name']}")
+    c.setFont("Helvetica", 9)
     dob1 = client['client1_dob'] or "N/A"
     age1 = f"Age: {client['client1_age']}" if client['client1_age'] else "Age: N/A"
     ssn1 = f"SSN: ***-**-{client['client1_ssn_last_4']}" if client['client1_ssn_last_4'] else "SSN: N/A"
-    c.drawString(48, 478, f"DOB: {dob1}   |   {age1}   |   {ssn1}")
+    c.drawString(48, 466, f"DOB: {dob1}   |   {age1}   |   {ssn1}")
     
-    # Client 2 info if present
     if client.get('client2_first_name'):
-        c.setFillColor(COLOR_INFLOW_GREEN)
-        c.roundRect(416, 455, 340, 52, 6, fill=1, stroke=0)
+        c.setFillColor(colors.HexColor('#059669'))
+        draw_shadow_rect(c, 416, 445, 340, 56, 8, 2, -2, 0.1)
+        c.roundRect(416, 445, 340, 56, 8, fill=1, stroke=0)
         c.setFillColor(COLOR_WHITE)
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(428, 492, f"{client['client2_first_name']} {client['client2_last_name']}")
-        c.setFont("Helvetica", 8)
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(428, 484, f"{client['client2_first_name']} {client['client2_last_name']}")
+        c.setFont("Helvetica", 9)
         dob2 = client['client2_dob'] or "N/A"
         age2 = f"Age: {client['client2_age']}" if client['client2_age'] else "Age: N/A"
         ssn2 = f"SSN: ***-**-{client['client2_ssn_last_4']}" if client['client2_ssn_last_4'] else "SSN: N/A"
-        c.drawString(428, 478, f"DOB: {dob2}   |   {age2}   |   {ssn2}")
+        c.drawString(428, 466, f"DOB: {dob2}   |   {age2}   |   {ssn2}")
         
     # --- LAYOUT DESIGN FOR TCC ---
     # Center: Primary Residence / Trust Bubble
-    cx_tr, cy_tr = 396, 270
-    w_tr, h_tr = 180, 85
+    cx_tr, cy_tr = 396, 260
+    w_tr, h_tr = 200, 90
+    draw_shadow_rect(c, cx_tr - w_tr/2, cy_tr - h_tr/2, w_tr, h_tr, 12, 3, -3, 0.15)
     c.setFillColor(COLOR_PRIMARY_NAVY)
     c.roundRect(cx_tr - w_tr/2, cy_tr - h_tr/2, w_tr, h_tr, 12, fill=1, stroke=0)
     c.setFillColor(COLOR_WHITE)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawCentredString(cx_tr, cy_tr + 24, "PRIMARY RESIDENCE TRUST")
-    c.setFont("Helvetica", 8)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawCentredString(cx_tr, cy_tr + 26, "PRIMARY RESIDENCE TRUST")
     
-    # Wrap address inside bubble
     addr = client.get('trust_address', 'Address not specified')
-    draw_wrapped_text(c, addr, cx_tr, cy_tr + 8, w_tr - 20, 10, font_size=8, align="center")
+    draw_wrapped_text(c, addr, cx_tr, cy_tr + 10, w_tr - 20, 11, font_size=8, align="center")
     
-    c.setFillColor(COLOR_WHITE)
-    c.setFont("Helvetica-Bold", 12)
-    c.drawCentredString(cx_tr, cy_tr - 24, f"Zestimate: {format_currency(trust_value)}")
+    c.setFillColor(colors.HexColor('#10B981')) # Emerald accent for value
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(cx_tr, cy_tr - 26, f"Zestimate: {format_currency(trust_value)}")
     
-    # Connect Trust bubble to Grand Total net worth
-    c.setStrokeColor(COLOR_BORDER)
-    c.setLineWidth(1)
-    c.line(cx_tr, cy_tr - h_tr/2, cx_tr, 110) # Line straight down to Non-Retirement/Totals
+    # Connection line colors
+    line_col = colors.HexColor('#94A3B8')
     
     # --- Top Left: Client 1 Retirement Box & Accounts ---
-    c1_ret_box_x, c1_ret_box_y = 36, 380
-    c.setFillColor(COLOR_BG_CARD)
-    c.roundRect(c1_ret_box_x, c1_ret_box_y, 160, 48, 6, fill=1, stroke=1)
+    c1_ret_box_x, c1_ret_box_y = 36, 370
+    draw_shadow_rect(c, c1_ret_box_x, c1_ret_box_y, 170, 52, 8, 2, -2, 0.05)
+    c.setFillColor(COLOR_WHITE)
+    c.setStrokeColor(colors.HexColor('#E2E8F0'))
+    c.roundRect(c1_ret_box_x, c1_ret_box_y, 170, 52, 8, fill=1, stroke=1)
     c.setFillColor(COLOR_PRIMARY_NAVY)
-    c.setFont("Helvetica-Bold", 9)
-    c.drawString(c1_ret_box_x + 10, c1_ret_box_y + 32, f"{client['client1_first_name']}'s Retirement")
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(c1_ret_box_x + 10, c1_ret_box_y + 12, format_currency(c1_ret_total))
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(c1_ret_box_x + 12, c1_ret_box_y + 34, f"{client['client1_first_name']}'s Retirement")
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(c1_ret_box_x + 12, c1_ret_box_y + 12, format_currency(c1_ret_total))
     
-    # Layout Client 1 Retirement Accounts Bubbles (Pills)
-    c.setStrokeColor(COLOR_BORDER)
-    c.setLineWidth(0.8)
     count1 = len(c1_ret_accs)
     for idx, acc in enumerate(c1_ret_accs):
         if count1 <= 4:
-            w = 160
-            h = 45
-            px = c1_ret_box_x
-            py = c1_ret_box_y - 50 - (idx * 52)
-            font_title = 8
-            font_desc = 7.5
-            font_val = 8.5
-            inner_padding = 8
+            w, h = 170, 48
+            px, py = c1_ret_box_x, c1_ret_box_y - 58 - (idx * 56)
         else:
-            w = 115
-            h = 38
+            w, h = 120, 42
             col = idx % 2
             row = idx // 2
-            px = c1_ret_box_x + (col * 125)
-            py = c1_ret_box_y - 45 - (row * 45)
-            font_title = 7
-            font_desc = 6.5
-            font_val = 7.5
-            inner_padding = 6
+            px, py = c1_ret_box_x + (col * 130), c1_ret_box_y - 52 - (row * 50)
             
+        draw_shadow_rect(c, px, py, w, h, 6, 2, -2, 0.05)
         c.setFillColor(COLOR_WHITE)
+        c.setStrokeColor(colors.HexColor('#E2E8F0'))
         c.roundRect(px, py, w, h, 6, fill=1, stroke=1)
         
+        # Color accent strip on the left
+        c.setFillColor(colors.HexColor('#6366F1')) # Indigo
+        c.path = c.beginPath()
+        c.path.moveTo(px + 4, py)
+        c.path.lineTo(px, py)
+        c.path.lineTo(px, py + h)
+        c.path.lineTo(px + 4, py + h)
+        c.drawPath(c.path, stroke=0, fill=1)
+        
         c.setFillColor(COLOR_PRIMARY_NAVY)
-        c.setFont("Helvetica-Bold", font_title)
-        c.drawString(px + inner_padding, py + h - 12, f"{acc['institution']} {acc['subtype']}")
-        
-        c.setFont("Helvetica", font_desc)
+        c.setFont("Helvetica-Bold", 8 if count1 <= 4 else 7)
+        c.drawString(px + 10, py + h - 14, f"{acc['institution']} {acc['subtype']}")
+        c.setFont("Helvetica", 7.5 if count1 <= 4 else 6.5)
         c.setFillColor(COLOR_TEXT_MUTED)
-        c.drawString(px + inner_padding, py + h - 22, f"Account: *{acc['account_number_last_4']}")
-        
-        c.setFont("Helvetica-Bold", font_val)
+        c.drawString(px + 10, py + h - 25, f"Account: *{acc['account_number_last_4']}")
+        c.setFont("Helvetica-Bold", 9 if count1 <= 4 else 8)
         c.setFillColor(COLOR_PRIMARY_NAVY)
         val_str = format_currency(acc['balance'])
         if acc['cash_balance'] > 0:
             val_str += f" (Cash: {format_currency(acc['cash_balance'])})"
-        c.drawString(px + inner_padding, py + h - 33, val_str)
+        c.drawString(px + 10, py + h - 38, val_str)
         
-        c.setStrokeColor(COLOR_BORDER)
         if count1 <= 4:
-            c.line(px + 80, py + h, px + 80, py + h + 7 if idx == 0 else py + h + 5)
+            draw_elbow_line(c, px + 85, py + h, px + 85, py + h + (10 if idx==0 else 8), line_col)
         else:
-            c.line(px + w/2, py + h, px + w/2, py + h + 5)
-    
-    # Connect box to client info
-    c.line(c1_ret_box_x + 80, c1_ret_box_y + 48, c1_ret_box_x + 80, 455)
-    
+            draw_elbow_line(c, px + w/2, py + h, px + w/2, py + h + 8, line_col)
+            
+    draw_elbow_line(c, c1_ret_box_x + 85, c1_ret_box_y + 52, cx_tr - w_tr/2 + 20, cy_tr + h_tr/2, line_col)
+
     # --- Top Right: Client 2 Retirement Box & Accounts ---
     if client.get('client2_first_name'):
-        c2_ret_box_x, c2_ret_box_y = 596, 380
-        c.setFillColor(COLOR_BG_CARD)
-        c.roundRect(c2_ret_box_x, c2_ret_box_y, 160, 48, 6, fill=1, stroke=1)
+        c2_ret_box_x, c2_ret_box_y = 586, 370
+        draw_shadow_rect(c, c2_ret_box_x, c2_ret_box_y, 170, 52, 8, 2, -2, 0.05)
+        c.setFillColor(COLOR_WHITE)
+        c.setStrokeColor(colors.HexColor('#E2E8F0'))
+        c.roundRect(c2_ret_box_x, c2_ret_box_y, 170, 52, 8, fill=1, stroke=1)
         c.setFillColor(COLOR_PRIMARY_NAVY)
-        c.setFont("Helvetica-Bold", 9)
-        c.drawString(c2_ret_box_x + 10, c2_ret_box_y + 32, f"{client['client2_first_name']}'s Retirement")
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(c2_ret_box_x + 10, c2_ret_box_y + 12, format_currency(c2_ret_total))
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(c2_ret_box_x + 12, c2_ret_box_y + 34, f"{client['client2_first_name']}'s Retirement")
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(c2_ret_box_x + 12, c2_ret_box_y + 12, format_currency(c2_ret_total))
         
-        # Layout Client 2 Retirement Accounts Bubbles (Pills)
         count2 = len(c2_ret_accs)
         for idx, acc in enumerate(c2_ret_accs):
             if count2 <= 4:
-                w = 160
-                h = 45
-                px = c2_ret_box_x
-                py = c2_ret_box_y - 50 - (idx * 52)
-                font_title = 8
-                font_desc = 7.5
-                font_val = 8.5
-                inner_padding = 8
+                w, h = 170, 48
+                px, py = c2_ret_box_x, c2_ret_box_y - 58 - (idx * 56)
             else:
+                w, h = 120, 42
                 col = idx % 2
                 row = idx // 2
-                w = 115
-                h = 38
-                px = 521 + (col * 125)
-                py = c2_ret_box_y - 45 - (row * 45)
-                font_title = 7
-                font_desc = 6.5
-                font_val = 7.5
-                inner_padding = 6
+                px, py = 502 + (col * 130), c2_ret_box_y - 52 - (row * 50)
                 
+            draw_shadow_rect(c, px, py, w, h, 6, 2, -2, 0.05)
             c.setFillColor(COLOR_WHITE)
             c.roundRect(px, py, w, h, 6, fill=1, stroke=1)
             
+            c.setFillColor(colors.HexColor('#6366F1'))
+            c.path = c.beginPath()
+            c.path.moveTo(px + 4, py)
+            c.path.lineTo(px, py)
+            c.path.lineTo(px, py + h)
+            c.path.lineTo(px + 4, py + h)
+            c.drawPath(c.path, stroke=0, fill=1)
+            
             c.setFillColor(COLOR_PRIMARY_NAVY)
-            c.setFont("Helvetica-Bold", font_title)
-            c.drawString(px + inner_padding, py + h - 12, f"{acc['institution']} {acc['subtype']}")
-            
-            c.setFont("Helvetica", font_desc)
+            c.setFont("Helvetica-Bold", 8 if count2 <= 4 else 7)
+            c.drawString(px + 10, py + h - 14, f"{acc['institution']} {acc['subtype']}")
+            c.setFont("Helvetica", 7.5 if count2 <= 4 else 6.5)
             c.setFillColor(COLOR_TEXT_MUTED)
-            c.drawString(px + inner_padding, py + h - 22, f"Account: *{acc['account_number_last_4']}")
-            
-            c.setFont("Helvetica-Bold", font_val)
+            c.drawString(px + 10, py + h - 25, f"Account: *{acc['account_number_last_4']}")
+            c.setFont("Helvetica-Bold", 9 if count2 <= 4 else 8)
             c.setFillColor(COLOR_PRIMARY_NAVY)
             val_str = format_currency(acc['balance'])
             if acc['cash_balance'] > 0:
                 val_str += f" (Cash: {format_currency(acc['cash_balance'])})"
-            c.drawString(px + inner_padding, py + h - 33, val_str)
+            c.drawString(px + 10, py + h - 38, val_str)
             
-            c.setStrokeColor(COLOR_BORDER)
             if count2 <= 4:
-                c.line(px + 80, py + h, px + 80, py + h + 5)
+                draw_elbow_line(c, px + 85, py + h, px + 85, py + h + (10 if idx==0 else 8), line_col)
             else:
-                c.line(px + w/2, py + h, px + w/2, py + h + 5)
+                draw_elbow_line(c, px + w/2, py + h, px + w/2, py + h + 8, line_col)
                 
-        c.line(c2_ret_box_x + 80, c2_ret_box_y + 48, c2_ret_box_x + 80, 455)
-        
-    # --- Bottom: Non-Retirement Box & Accounts (Joint accounts, Schwab brokerage etc.) ---
-    # Centered in the lower-middle half
-    non_ret_box_x, non_ret_box_y = 220, 200
-    c.setFillColor(COLOR_BG_CARD)
-    c.roundRect(non_ret_box_x, non_ret_box_y, 160, 48, 6, fill=1, stroke=1)
+        draw_elbow_line(c, c2_ret_box_x + 85, c2_ret_box_y + 52, cx_tr + w_tr/2 - 20, cy_tr + h_tr/2, line_col)
+
+    # --- Bottom: Non-Retirement Box & Accounts ---
+    non_ret_box_x, non_ret_box_y = 311, 150
+    draw_shadow_rect(c, non_ret_box_x, non_ret_box_y, 170, 52, 8, 2, -2, 0.05)
+    c.setFillColor(COLOR_WHITE)
+    c.setStrokeColor(colors.HexColor('#E2E8F0'))
+    c.roundRect(non_ret_box_x, non_ret_box_y, 170, 52, 8, fill=1, stroke=1)
     c.setFillColor(COLOR_PRIMARY_NAVY)
-    c.setFont("Helvetica-Bold", 9)
-    c.drawString(non_ret_box_x + 10, non_ret_box_y + 32, "Non-Retirement Assets")
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(non_ret_box_x + 10, non_ret_box_y + 12, format_currency(non_ret_total))
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(non_ret_box_x + 12, non_ret_box_y + 34, "Non-Retirement Assets")
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(non_ret_box_x + 12, non_ret_box_y + 12, format_currency(non_ret_total))
     
-    # Lay out Non-Retirement account bubbles horizontally below the box
     count_non = len(non_ret_accs)
     for idx, acc in enumerate(non_ret_accs):
-        w = 120
-        h = 42
+        w, h = 130, 46
         if count_non == 1:
             px = 396 - w/2
         else:
-            spacing = (720 - w) / (count_non - 1)
+            spacing = (720 - w) / max(1, count_non - 1)
             px = 36 + (idx * spacing)
         py = non_ret_box_y - 65
         
+        draw_shadow_rect(c, px, py, w, h, 6, 2, -2, 0.05)
         c.setFillColor(COLOR_WHITE)
         c.roundRect(px, py, w, h, 6, fill=1, stroke=1)
         
+        c.setFillColor(colors.HexColor('#F59E0B')) # Amber accent
+        c.path = c.beginPath()
+        c.path.moveTo(px + 4, py)
+        c.path.lineTo(px, py)
+        c.path.lineTo(px, py + h)
+        c.path.lineTo(px + 4, py + h)
+        c.drawPath(c.path, stroke=0, fill=1)
+        
         c.setFillColor(COLOR_PRIMARY_NAVY)
-        c.setFont("Helvetica-Bold", 7.5)
-        c.drawString(px + 6, py + h - 12, f"{acc['institution']} {acc['subtype']}")
-        
-        c.setFont("Helvetica", 7)
-        c.setFillColor(COLOR_TEXT_MUTED)
-        c.drawString(px + 6, py + h - 22, f"Account: *{acc['account_number_last_4']}")
-        
         c.setFont("Helvetica-Bold", 8)
+        c.drawString(px + 10, py + h - 14, f"{acc['institution']} {acc['subtype']}")
+        c.setFont("Helvetica", 7.5)
+        c.setFillColor(COLOR_TEXT_MUTED)
+        c.drawString(px + 10, py + h - 25, f"Account: *{acc['account_number_last_4']}")
+        c.setFont("Helvetica-Bold", 9)
         c.setFillColor(COLOR_PRIMARY_NAVY)
         val_str = format_currency(acc['balance'])
         if acc['cash_balance'] > 0:
             val_str += f" (Cash: {format_currency(acc['cash_balance'])})"
-        c.drawString(px + 6, py + h - 33, val_str)
+        c.drawString(px + 10, py + h - 38, val_str)
         
-        c.setStrokeColor(COLOR_BORDER)
-        c.line(px + w/2, py + h, non_ret_box_x + 80, non_ret_box_y)
+        draw_elbow_line(c, px + w/2, py + h, non_ret_box_x + 85, non_ret_box_y, line_col)
         
-    # Line from Non-retirement box up to Trust
-    c.line(non_ret_box_x + 80, non_ret_box_y + 48, cx_tr, cy_tr - h_tr/2)
+    draw_elbow_line(c, non_ret_box_x + 85, non_ret_box_y + 52, cx_tr, cy_tr - h_tr/2, line_col)
     
-    # --- Bottom Left: Liabilities Summary Card (Not subtracted from NW) ---
+    # --- Bottom Left: Liabilities Summary Card ---
     lia_box_x, lia_box_y = 36, 40
-    c.setFillColor(colors.HexColor('#fee2e2')) # Light red
-    c.roundRect(lia_box_x, lia_box_y, 340, 80, 8, fill=1, stroke=0)
-    c.setFillColor(colors.HexColor('#991b1b')) # Deep red
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(lia_box_x + 12, lia_box_y + 64, "LIABILITIES & OUTSTANDING DEBTS")
+    draw_shadow_rect(c, lia_box_x, lia_box_y, 250, 90, 10, 3, -3, 0.05)
+    c.setFillColor(COLOR_WHITE)
+    c.setStrokeColor(colors.HexColor('#FECACA')) # Soft red border
+    c.roundRect(lia_box_x, lia_box_y, 250, 90, 10, fill=1, stroke=1)
     
-    # List first two liabilities text
+    c.setFillColor(colors.HexColor('#EF4444')) # Red header banner
+    c.path = c.beginPath()
+    c.path.moveTo(lia_box_x + 10, lia_box_y + 90)
+    c.path.lineTo(lia_box_x, lia_box_y + 90)
+    c.path.lineTo(lia_box_x, lia_box_y + 70)
+    c.path.lineTo(lia_box_x + 250, lia_box_y + 70)
+    c.path.lineTo(lia_box_x + 250, lia_box_y + 90)
+    c.path.lineTo(lia_box_x + 240, lia_box_y + 90)
+    # Just draw a rect for simplicity over the top edge
+    c.roundRect(lia_box_x, lia_box_y + 70, 250, 20, 4, fill=1, stroke=0)
+    c.rect(lia_box_x, lia_box_y + 70, 250, 10, fill=1, stroke=0) # square off bottom corners
+    
+    c.setFillColor(COLOR_WHITE)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(lia_box_x + 12, lia_box_y + 76, "LIABILITIES & OUTSTANDING DEBTS")
+    
     c.setFont("Helvetica", 8)
     c.setFillColor(COLOR_PRIMARY_NAVY)
     for idx, acc in enumerate(liabilities_accs[:3]):
-        lia_text = f"• {acc['institution']} {acc['subtype']} (*{acc['account_number_last_4']}) @ {format_percent(acc['interest_rate'])}"
-        c.drawString(lia_box_x + 12, lia_box_y + 45 - (idx * 12), lia_text)
-        c.drawRightString(lia_box_x + 328, lia_box_y + 45 - (idx * 12), format_currency(acc['balance']))
+        lia_text = f"• {acc['institution']} {acc['subtype']} (*{acc['account_number_last_4']})"
+        c.drawString(lia_box_x + 12, lia_box_y + 55 - (idx * 14), lia_text)
+        c.drawRightString(lia_box_x + 238, lia_box_y + 55 - (idx * 14), format_currency(acc['balance']))
         
+    c.setStrokeColor(colors.HexColor('#E2E8F0'))
+    c.line(lia_box_x + 12, lia_box_y + 24, lia_box_x + 238, lia_box_y + 24)
+    
     c.setFont("Helvetica-Bold", 11)
-    c.setFillColor(colors.HexColor('#991b1b'))
+    c.setFillColor(colors.HexColor('#DC2626')) # Red
     c.drawString(lia_box_x + 12, lia_box_y + 10, "Total Liabilities")
-    c.drawRightString(lia_box_x + 328, lia_box_y + 10, format_currency(liabilities_total))
+    c.drawRightString(lia_box_x + 238, lia_box_y + 10, format_currency(liabilities_total))
     
     # --- Bottom Right: Grand Total Net Worth Box ---
-    gt_box_x, gt_box_y = 416, 40
-    c.setFillColor(colors.HexColor('#dcfce7')) # Light green
-    c.roundRect(gt_box_x, gt_box_y, 340, 80, 8, fill=1, stroke=0)
-    c.setFillColor(COLOR_GOLD_ACCENT)
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(gt_box_x + 12, gt_box_y + 62, "ESTIMATED CLIENT NET WORTH")
+    gt_box_x, gt_box_y = 506, 40
+    draw_shadow_rect(c, gt_box_x, gt_box_y, 250, 90, 10, 4, -4, 0.1)
+    c.setFillColor(COLOR_WHITE)
+    c.setStrokeColor(colors.HexColor('#A7F3D0')) # Soft green border
+    c.roundRect(gt_box_x, gt_box_y, 250, 90, 10, fill=1, stroke=1)
     
-    # Breakdown labels
+    c.setFillColor(colors.HexColor('#10B981')) # Emerald green banner
+    c.roundRect(gt_box_x, gt_box_y + 70, 250, 20, 4, fill=1, stroke=0)
+    c.rect(gt_box_x, gt_box_y + 70, 250, 10, fill=1, stroke=0)
+    
+    c.setFillColor(COLOR_WHITE)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(gt_box_x + 12, gt_box_y + 76, "ESTIMATED CLIENT NET WORTH")
+    
     c.setFont("Helvetica", 8)
     c.setFillColor(COLOR_PRIMARY_NAVY)
-    c.drawString(gt_box_x + 12, gt_box_y + 45, "Total Retirement Portfolio:")
-    c.drawRightString(gt_box_x + 328, gt_box_y + 45, format_currency(c1_ret_total + c2_ret_total))
+    c.drawString(gt_box_x + 12, gt_box_y + 55, "Total Retirement Portfolio:")
+    c.drawRightString(gt_box_x + 238, gt_box_y + 55, format_currency(c1_ret_total + c2_ret_total))
     
-    c.drawString(gt_box_x + 12, gt_box_y + 32, "Total Non-Retirement Portfolio:")
-    c.drawRightString(gt_box_x + 328, gt_box_y + 32, format_currency(non_ret_total))
+    c.drawString(gt_box_x + 12, gt_box_y + 41, "Total Non-Retirement Portfolio:")
+    c.drawRightString(gt_box_x + 238, gt_box_y + 41, format_currency(non_ret_total))
     
-    c.drawString(gt_box_x + 12, gt_box_y + 19, "Primary Residence Trust Value:")
-    c.drawRightString(gt_box_x + 328, gt_box_y + 19, format_currency(trust_value))
+    c.drawString(gt_box_x + 12, gt_box_y + 27, "Primary Residence Trust Value:")
+    c.drawRightString(gt_box_x + 238, gt_box_y + 27, format_currency(trust_value))
     
-    # Line
-    c.setStrokeColor(COLOR_PRIMARY_NAVY)
-    c.setLineWidth(1)
-    c.line(gt_box_x + 12, gt_box_y + 15, gt_box_x + 328, gt_box_y + 15)
+    c.setStrokeColor(colors.HexColor('#E2E8F0'))
+    c.line(gt_box_x + 12, gt_box_y + 22, gt_box_x + 238, gt_box_y + 22)
     
-    c.setFont("Helvetica-Bold", 12)
-    c.setFillColor(COLOR_PRIMARY_NAVY)
-    c.drawString(gt_box_x + 12, gt_box_y + 4, "Grand Total Net Worth")
-    c.drawRightString(gt_box_x + 328, gt_box_y + 4, format_currency(grand_total_net_worth))
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColor(colors.HexColor('#047857')) # Deep emerald
+    c.drawString(gt_box_x + 12, gt_box_y + 6, "Grand Total")
+    c.drawRightString(gt_box_x + 238, gt_box_y + 6, format_currency(grand_total_net_worth))
     
     # Landscape Footer
     c.setFont("Helvetica", 8)
