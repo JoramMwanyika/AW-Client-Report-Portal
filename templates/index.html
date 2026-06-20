@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AW Client Report Portal - Windbrook Solutions</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Canva Design Button SDK -->
+    <script src="https://sdk.canva.com/designbutton/v2/api.js"></script>
+</head>
+<body>
+
+    <!-- SIDEBAR NAVIGATION -->
+    <div id="sidebar">
+        <div class="brand">
+            <span class="brand-title">WINDBROOK</span>
+            <span class="brand-subtitle">REPORT PORTAL</span>
+        </div>
+        <ul class="nav-menu">
+            <li>
+                <a class="nav-item active" onclick="switchView('client-list')">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    Client Directory
+                </a>
+            </li>
+            <li>
+                <a class="nav-item" onclick="openNewClientForm()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                    </svg>
+                    Add Client Record
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- MAIN PANEL CONTENT -->
+    <div id="main-content">
+
+        <!-- VIEW 1: CLIENT DIRECTORY -->
+        <div id="view-client-list" class="view-panel active">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Client Directory</h1>
+                    <p class="page-subtitle">Select a client below to record quarterly balances, view profiles, or print reports.</p>
+                </div>
+                <button class="btn btn-primary" onclick="openNewClientForm()">
+                    <svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    New Client
+                </button>
+            </div>
+            
+            <div id="clients-container" class="clients-grid">
+                <!-- Dynamically loaded client cards -->
+            </div>
+        </div>
+
+        <!-- VIEW 2: CLIENT RECORD SETUP / LIGHTWEIGHT CRM -->
+        <div id="view-client-setup" class="view-panel">
+            <div class="page-header">
+                <div>
+                    <h1 id="setup-title" class="page-title">Create Client Record</h1>
+                    <p class="page-subtitle">Configure the client's personal details, budget profiles, and account assets.</p>
+                </div>
+                <button class="btn btn-secondary" onclick="switchView('client-list')">Cancel</button>
+            </div>
+
+            <form id="client-form" onsubmit="saveClientProfile(event)">
+                <input type="hidden" id="setup-client-id">
+                
+                <div class="card">
+                    <h2 class="card-title">Personal Details</h2>
+                    
+                    <div class="form-section-title">Client 1 (Primary Account Owner)</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="c1-first">First Name *</label>
+                            <input class="form-control" type="text" id="c1-first" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="c1-last">Last Name *</label>
+                            <input class="form-control" type="text" id="c1-last" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="c1-dob">DOB</label>
+                            <input class="form-control" type="date" id="c1-dob">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="c1-ssn">SSN Last 4</label>
+                            <input class="form-control" type="text" id="c1-ssn" maxlength="4" placeholder="e.g. 1234">
+                        </div>
+                    </div>
+
+                    <div style="margin: 20px 0 10px 0">
+                        <input type="checkbox" id="has-spouse" onchange="toggleSpouseSection(this.checked)">
+                        <label for="has-spouse" style="font-weight:600; cursor:pointer; margin-left: 6px;">Add Spouse (Client 2)</label>
+                    </div>
+
+                    <div id="spouse-section" style="display:none">
+                        <div class="form-section-title">Client 2 (Spouse Profile)</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="c2-first">First Name</label>
+                                <input class="form-control" type="text" id="c2-first">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="c2-last">Last Name</label>
+                                <input class="form-control" type="text" id="c2-last">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="c2-dob">DOB</label>
+                                <input class="form-control" type="date" id="c2-dob">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="c2-ssn">SSN Last 4</label>
+                                <input class="form-control" type="text" id="c2-ssn" maxlength="4" placeholder="e.g. 5678">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="columns-2">
+                    <div class="card">
+                        <h2 class="card-title">Static Cash Flow Parameters</h2>
+                        <div class="form-group">
+                            <label class="form-label" for="monthly-salary">Monthly Take-Home Salary ($)</label>
+                            <input class="form-control" type="number" id="monthly-salary" min="0" value="0" step="any">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="agreed-expense">Agreed Monthly Expense Outflow ($)</label>
+                            <input class="form-control" type="number" id="agreed-expense" min="0" value="0" step="any">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="trust-address">Primary Residence Property Address</label>
+                            <input class="form-control" type="text" id="trust-address" placeholder="123 Financial Way, Atlanta GA">
+                            <p class="form-subtitle" style="margin-top:4px">Used for Trust section (Zillow lookup address)</p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2 class="card-title">Insurance Deductibles</h2>
+                        <p class="form-subtitle">Configures the cushion target calculation: Target = (6 × Outflow) + Sum of Deductibles.</p>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="ded-auto">Auto ($)</label>
+                                <input class="form-control" type="number" id="ded-auto" min="0" value="0" step="any">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="ded-home">Home ($)</label>
+                                <input class="form-control" type="number" id="ded-home" min="0" value="0" step="any">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="ded-health">Health ($)</label>
+                                <input class="form-control" type="number" id="ded-health" min="0" value="0" step="any">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="ded-other">Other ($)</label>
+                                <input class="form-control" type="number" id="ded-other" min="0" value="0" step="any">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title">
+                        Client Account Structure
+                        <button type="button" class="btn btn-secondary" onclick="addAccountRow()" style="padding: 4px 10px; font-size: 0.8rem">+ Add Account</button>
+                    </h2>
+                    <p class="form-subtitle">Configure which accounts this client holds (Retirement IRA/401K, Non-Retirement Joint/Brokerage, Liabilities). Account numbers should only display last 4 digits.</p>
+                    
+                    <table class="accounts-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 20%">Account Type</th>
+                                <th style="width: 20%">Owner</th>
+                                <th style="width: 20%">Subtype (Roth, 401K etc.)</th>
+                                <th style="width: 20%">Institution (Schwab, Bank etc.)</th>
+                                <th style="width: 12%">Last 4 Digits</th>
+                                <th style="width: 10%">Interest % (Liab.)</th>
+                                <th style="width: 8%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="accounts-tbody">
+                            <!-- Accounts rows added dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top: 24px; display: flex; gap: 16px;">
+                    <button class="btn btn-success" type="submit">Save Client Profile</button>
+                    <button class="btn btn-secondary" type="button" onclick="switchView('client-list')">Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- VIEW 3: QUARTERLY DATA ENTRY FORM & REAL-TIME MATH -->
+        <div id="view-report-entry" class="view-panel">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Quarterly Report Entry</h1>
+                    <p class="page-subtitle" id="report-client-subtitle">Enter actual balances for current client reporting.</p>
+                </div>
+                <button class="btn btn-secondary" onclick="cancelReportEntry()">Cancel</button>
+            </div>
+
+            <div class="layout-split">
+                <!-- Data Entry Checklist (Left) -->
+                <div>
+                    <form id="report-entry-form" onsubmit="saveQuarterlyBalances(event)">
+                        <input type="hidden" id="report-client-id">
+                        
+                        <div class="card">
+                            <h2 class="card-title">Report Details</h2>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="rep-quarter">Reporting Period *</label>
+                                    <input class="form-control" type="text" id="rep-quarter" placeholder="e.g. 2026-Q1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="rep-date">Report Date *</label>
+                                    <input class="form-control" type="date" id="rep-date" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h2 class="card-title">Cash Flow & Trust Balances</h2>
+                            <div class="alert-box">
+                                <svg style="width:20px;height:20px;flex-shrink:0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <div>
+                                    Enter the checking/savings balance for the **Private Reserve** and the current Zestimate home value for the **Trust** property.
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="rep-private-reserve">Private Reserve Balance ($) *</label>
+                                    <div style="display:flex; gap:8px">
+                                        <input class="form-control balance-input" type="number" id="rep-private-reserve" required oninput="triggerCalculations()">
+                                        <button type="button" class="btn btn-secondary" style="padding:8px" onclick="useLastReportVal('rep-private-reserve')">Last</button>
+                                    </div>
+                                    <p class="form-subtitle" id="last-rep-private-reserve-ref" style="margin-top:4px; margin-bottom:0">Previous: N/A</p>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="rep-trust-value">Primary Residence Zillow Value ($)</label>
+                                    <div style="display:flex; gap:8px">
+                                        <input class="form-control balance-input" type="number" id="rep-trust-value" oninput="triggerCalculations()">
+                                        <button type="button" class="btn btn-secondary" style="padding:8px" onclick="useLastReportVal('rep-trust-value')">Last</button>
+                                    </div>
+                                    <p class="form-subtitle" id="last-rep-trust-value-ref" style="margin-top:4px; margin-bottom:0">Previous: N/A</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h2 class="card-title">Portfolio Account Balances</h2>
+                            <p class="form-subtitle">Record current balances. For retirement/brokerage accounts, enter both the total Balance and the Cash component portion.</p>
+                            
+                            <table class="accounts-table">
+                                <thead>
+                                    <tr>
+                                        <th>Account</th>
+                                        <th>Owner</th>
+                                        <th>Type</th>
+                                        <th style="width: 25%">Current Balance ($)</th>
+                                        <th style="width: 25%">Cash Balance ($) (if applicable)</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="report-accounts-tbody">
+                                    <!-- Dynamic rows loaded from client's setup -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div style="margin-top: 24px; display: flex; gap: 16px;">
+                            <button class="btn btn-success" type="submit">Save & Generate Reports</button>
+                            <button class="btn btn-secondary" type="button" onclick="cancelReportEntry()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Live Auto-Calculation Review Sidebar (Right) -->
+                <div>
+                    <div class="calculation-preview-panel">
+                        <h3 class="calculation-preview-title">Real-Time Review</h3>
+                        
+                        <div style="font-size:0.8rem; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin-bottom:8px">SACS (Cash Flow) Math</div>
+                        <div class="calc-row">
+                            <span>Monthly Inflow:</span>
+                            <span id="preview-inflow">$0</span>
+                        </div>
+                        <div class="calc-row">
+                            <span>Monthly Outflow:</span>
+                            <span id="preview-outflow">$0</span>
+                        </div>
+                        <div class="calc-row">
+                            <span>Monthly Excess:</span>
+                            <span id="preview-excess" class="calc-value-positive">$0</span>
+                        </div>
+                        <div class="calc-row" style="border-top:1px solid rgba(255,255,255,0.05); padding-top:8px">
+                            <span>Private Reserve Target:</span>
+                            <span id="preview-pr-target">$0</span>
+                        </div>
+                        <div class="calc-row">
+                            <span>Private Reserve Actual:</span>
+                            <span id="preview-pr-actual">$0</span>
+                        </div>
+                        <div class="calc-row">
+                            <span>Reserve Surplus:</span>
+                            <span id="preview-pr-surplus">$0</span>
+                        </div>
+
+                        <div style="font-size:0.8rem; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin-top:20px; margin-bottom:8px">TCC (Net Worth) Math</div>
+                        <div class="calc-row">
+                            <span>Client 1 Retirement:</span>
+                            <span id="preview-c1-retirement">$0</span>
+                        </div>
+                        <div class="calc-row">
+                            <span>Client 2 Retirement:</span>
+                            <span id="preview-c2-retirement">$0</span>
+                        </div>
+                        <div class="calc-row">
+                            <span>Non-Retirement:</span>
+                            <span id="preview-non-retirement">$0</span>
+                        </div>
+                        <div class="calc-row">
+                            <span>Trust Value:</span>
+                            <span id="preview-trust-val">$0</span>
+                        </div>
+                        <div class="calc-row">
+                            <span>Total Liabilities (Separate):</span>
+                            <span id="preview-liabilities" class="calc-value-negative" style="font-weight:normal">$0</span>
+                        </div>
+                        
+                        <div class="calc-row-highlight">
+                            <div style="display:flex; justify-content:space-between; align-items:baseline">
+                                <span>Net Worth Grand Total:</span>
+                                <span id="preview-grand-total" style="font-size:1.3rem; font-weight:800">$0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 4: REPORT HISTORY ARCHIVE & DOWNLOADS -->
+        <div id="view-report-history" class="view-panel">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title" id="history-title">Report Archive</h1>
+                    <p class="page-subtitle" id="history-subtitle">View past quarterly reports or download print-ready PDFs.</p>
+                </div>
+                <div style="display:flex; gap:12px">
+                    <button class="btn btn-primary" id="history-new-report-btn">Generate New Report</button>
+                    <button class="btn btn-secondary" onclick="switchView('client-list')">Back to Directory</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Historical Reports</h2>
+                <table class="reports-list-table">
+                    <thead>
+                        <tr>
+                            <th>Reporting Period</th>
+                            <th>Report Date</th>
+                            <th>Private Reserve Balance</th>
+                            <th>Net Worth Grand Total</th>
+                            <th>Liabilities</th>
+                            <th style="width: 30%">Actions (Download PDFs)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reports-history-tbody">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

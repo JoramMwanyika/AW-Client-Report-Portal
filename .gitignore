@@ -1,0 +1,16 @@
+# Environment configuration secrets
+.env
+.env.local
+.env.*
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Local SQLite databases
+*.db
+*.db-journal
+
+# Output PDFs (both testing and generated reports)
+generated_pdfs/
+test_pdfs/
