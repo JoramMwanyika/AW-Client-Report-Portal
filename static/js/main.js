@@ -644,6 +644,7 @@ async function viewClientReports(clientId) {
                         <button onclick="exportToCanva(${rep.id}, 'sacs')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 0.75rem">Canva SACS</button>
                         <a href="/api/reports/${rep.id}/download/tcc" download="TCC_${rep.quarter}.pdf" class="btn btn-primary" style="padding: 6px 10px; font-size: 0.75rem">TCC PDF</a>
                         <button onclick="exportToCanva(${rep.id}, 'tcc')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 0.75rem">Canva TCC</button>
+                        <button onclick="deleteReport(${rep.id})" class="btn btn-danger" style="padding: 6px 10px; font-size: 0.75rem">Delete</button>
                     </div>
                 </td>
             `;
@@ -659,6 +660,39 @@ async function viewClientReports(clientId) {
 function cancelReportForm() {
     // Just return to client history
     switchView('report-history');
+}
+
+async function deleteReport(reportId) {
+    if (!confirm("Are you sure you want to delete this report? This action cannot be undone.")) {
+        return;
+    }
+    
+    try {
+        const btn = event.target;
+        btn.disabled = true;
+        btn.textContent = "Deleting...";
+        
+        const response = await fetch(`/api/reports/${reportId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.status === 401) {
+            window.location.href = '/login';
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error("Failed to delete report");
+        }
+        
+        // Refresh the view
+        if (activeClientId) {
+            viewClientReports(activeClientId);
+        }
+    } catch (err) {
+        console.error("Delete error:", err);
+        alert("Failed to delete the report.");
+    }
 }
 
 // ----------------- AUTHENTICATION -----------------

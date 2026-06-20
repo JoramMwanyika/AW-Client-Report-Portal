@@ -351,3 +351,17 @@ def get_most_recent_report(client_id):
     if row:
         return get_report_details(row['id'])
     return None
+
+def delete_report(report_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM report_balances WHERE report_id = ?", (report_id,))
+        cursor.execute("DELETE FROM reports WHERE id = ?", (report_id,))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        raise e

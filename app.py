@@ -172,6 +172,17 @@ def get_report_json(report_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/reports/<int:report_id>', methods=['DELETE'])
+def delete_report(report_id):
+    try:
+        success = database.delete_report(report_id)
+        if success:
+            return jsonify({"message": "Report deleted successfully"}), 200
+        else:
+            return jsonify({"error": "Failed to delete report"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # DOWNLOAD PDF ENDPOINTS
 @app.route('/api/reports/<int:report_id>/download/sacs', methods=['GET'])
 def download_sacs(report_id):
