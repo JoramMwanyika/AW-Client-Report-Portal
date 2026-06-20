@@ -653,6 +653,47 @@ async function viewClientReports(clientId) {
 }
 
 // CANVA EXPORT TRIGGER
-function exportToCanva(reportId, type) {
-    window.open(`/api/reports/${reportId}/export/canva?type=${type}`, '_blank');
+async function exportToCanva(reportId, type) {
+    const btn = event.target;
+    const oldText = btn.textContent;
+    btn.textContent = "Processing...";
+    btn.disabled = true;
+
+    // Open the window synchronously to bypass browser popup blockers
+    const canvaWindow = window.open('about:blank', '_blank');
+
+    try {
+        // Fetch the PDF as a blob to force a local download (preventing the browser from opening it inline)
+        const response = await fetch(`/api/reports/${reportId}/download/${type}`);
+        if (!response.ok) throw new Error("Failed to download PDF");
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        const filename = `${type.toUpperCase()}_Report_${reportId}.pdf`;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }, 100);
+
+        // Point the new window to Canva's dedicated PDF editor
+        canvaWindow.location.href = 'https://www.canva.com/pdf-editor/';
+
+        // Alert to instruct the user on the next step
+        alert(`Your report has been downloaded as "${filename}".\n\nCanva has deprecated automated URL imports, so we have opened Canva's PDF Editor in a new tab.\n\nPlease switch to that tab and DRAG AND DROP the downloaded PDF file into the Canva window to edit your report.`);
+
+    } catch (err) {
+        console.error("Export error:", err);
+        if (canvaWindow) canvaWindow.close();
+        alert("An error occurred during export.");
+    } finally {
+        btn.textContent = oldText;
+        btn.disabled = false;
+    }
 }
