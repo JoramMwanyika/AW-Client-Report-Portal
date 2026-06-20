@@ -192,6 +192,34 @@ def download_tcc(report_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+def upload_to_temp_host(filepath):
+    # Host 1: tmpfiles.org (high reliability, no registration)
+    try:
+        with open(filepath, 'rb') as f:
+            r = requests.post('https://tmpfiles.org/api/v1/upload', files={'file': f}, timeout=10)
+        if r.status_code == 200:
+            data = r.json()
+            if data.get('status') == 'success':
+                url = data['data']['url']
+                # Transform to direct download URL (insert /dl/)
+                direct_url = url.replace('https://tmpfiles.org/', 'https://tmpfiles.org/dl/')
+                return direct_url
+    except Exception as e:
+        print(f"tmpfiles.org upload failed: {e}")
+
+    # Host 2: file.io (fallback)
+    try:
+        with open(filepath, 'rb') as f:
+            r = requests.post('https://file.io', files={'file': f}, data={'expires': '1h'}, timeout=10)
+        if r.status_code == 200:
+            data = r.json()
+            if data.get('success'):
+                return data['link']
+    except Exception as e:
+        print(f"file.io upload failed: {e}")
+
+    return None
+
 @app.route('/api/reports/<int:report_id>/export/canva', methods=['POST'])
 def export_to_canva(report_id):
     try:
@@ -230,12 +258,10 @@ def export_to_canva(report_id):
         else:
             pdf_generator.generate_tcc_pdf(filepath, client, report_details)
             
-        # Upload the PDF to file.io for temporary public hosting
-        with open(filepath, 'rb') as f:
-            upload_response = requests.post('https://file.io', files={'file': f}, data={'expires': '1h'})
-            
-        if upload_response.status_code == 200:
-            public_pdf_url = upload_response.json()['link']
+        # Upload the PDF to a temporary public host
+        public_pdf_url = upload_to_temp_host(filepath)
+        
+        if public_pdf_url:
             canva_import_url = f"https://www.canva.com/folder/upload?file_url={public_pdf_url}"
             return jsonify({
                 "success": True,
@@ -246,6 +272,7 @@ def export_to_canva(report_id):
             
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
