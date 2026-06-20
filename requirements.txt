@@ -2,3 +2,4 @@ flask
 reportlab
 python-dotenv
 gunicorn
+requests

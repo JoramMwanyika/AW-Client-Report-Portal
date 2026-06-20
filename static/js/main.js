@@ -656,23 +656,21 @@ async function viewClientReports(clientId) {
 async function exportToCanva(reportId, type) {
     const btn = event.target;
     const oldText = btn.textContent;
-    btn.textContent = "Redirecting...";
+    btn.textContent = "Preparing Canva...";
     btn.disabled = true;
     
     try {
-        // Trigger download programmatically
-        const downloadLink = document.createElement('a');
-        downloadLink.href = `/api/reports/${reportId}/download/${type}`;
-        downloadLink.download = `${type.toUpperCase()}_report.pdf`;
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
+        const res = await fetch(`/api/reports/${reportId}/export/canva?type=${type}`, { method: 'POST' });
+        const data = await res.json();
         
-        // Open Canva Upload directly for editing
-        window.open('https://www.canva.com/upload', '_blank');
+        if (res.ok && data.canva_url) {
+            window.open(data.canva_url, '_blank');
+        } else {
+            alert(data.error || "Failed to prepare Canva export");
+        }
     } catch (err) {
         console.error("Canva export error:", err);
-        alert("An error occurred during Canva export.");
+        alert("An error occurred while preparing Canva export.");
     } finally {
         btn.textContent = oldText;
         btn.disabled = false;
