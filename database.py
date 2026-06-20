@@ -13,7 +13,7 @@ def init_db():
     # Pre-seed persistent database from committed local reports.db if it doesn't exist yet
     if DATABASE_NAME != 'reports.db' and not os.path.exists(DATABASE_NAME):
         import shutil
-        local_db = 'reports.db'
+        local_db = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'reports.db')
         if os.path.exists(local_db):
             try:
                 db_dir = os.path.dirname(DATABASE_NAME)
@@ -23,6 +23,8 @@ def init_db():
                 print(f"Pre-seeded persistent database from {local_db} to {DATABASE_NAME}")
             except Exception as e:
                 print(f"Failed to pre-seed database: {e}")
+        else:
+            print(f"Pre-seed source database {local_db} not found!")
 
     conn = get_db_connection()
     cursor = conn.cursor()

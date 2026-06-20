@@ -287,12 +287,22 @@ def export_to_canva(report_id):
         else:
             pdf_generator.generate_tcc_pdf(filepath, client, report_details)
             
-        # Determine if host is public
+        # Determine if host is public and accessible
+        public_pdf_url = None
         if is_public_host(request.host):
-            # Production: Use the direct public URL served from this application
-            public_pdf_url = f"{request.host_url.rstrip('/')}/api/reports/{report_id}/download/{report_type}"
-        else:
-            # Local/Private Network: Upload to temporary public host for Canva server access
+            direct_url = f"{request.host_url.rstrip('/')}/api/reports/{report_id}/download/{report_type}"
+            try:
+                # Try requesting our own public download URL.
+                # If we get a 200, it's public and Canva can access it directly.
+                # Use a short timeout of 2 seconds so it doesn't block the redirect.
+                r = requests.get(direct_url, timeout=2)
+                if r.status_code == 200:
+                    public_pdf_url = direct_url
+            except Exception as e:
+                print(f"Direct public URL check failed (might be private/auth-locked): {e}")
+
+        # If direct URL is local, private, or unreachable, upload to temporary public host
+        if not public_pdf_url:
             public_pdf_url = upload_to_temp_host(filepath)
         
         if public_pdf_url:
