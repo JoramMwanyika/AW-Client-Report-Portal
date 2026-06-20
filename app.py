@@ -2,7 +2,7 @@ import os
 import tempfile
 import re
 import requests
-from flask import Flask, jsonify, request, send_file, render_template, redirect
+from flask import Flask, jsonify, request, send_file, render_template, redirect, session
 from dotenv import load_dotenv
 from werkzeug.middleware.proxy_fix import ProxyFix
 import database
@@ -12,6 +12,7 @@ import pdf_generator
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'windbrook-secure-key-2026')
 
 # Apply ProxyFix middleware to trust headers forwarded by reverse proxies (like Railway's load balancer)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
@@ -22,6 +23,42 @@ database.init_db()
 # Create folder for generated PDFs
 PDF_STORAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'generated_pdfs')
 os.makedirs(PDF_STORAGE_DIR, exist_ok=True)
+
+# AUTHENTICATION
+@app.before_request
+def require_login():
+    # Allow access to login route, login API, and static files without authentication
+    if request.endpoint in ('login', 'api_login', 'static'):
+        return
+        
+    if not session.get('logged_in'):
+        if request.path.startswith('/api/'):
+            return jsonify({"error": "Unauthorized"}), 401
+        else:
+            return redirect('/login')
+
+@app.route('/login')
+def login():
+    if session.get('logged_in'):
+        return redirect('/')
+    return render_template('login.html')
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    
+    if email == 'jorammwanyika@gmail.com' and password == 'Joram123':
+        session['logged_in'] = True
+        return jsonify({"message": "Login successful"}), 200
+    else:
+        return jsonify({"error": "Invalid email or password"}), 401
+
+@app.route('/api/logout', methods=['POST'])
+def api_logout():
+    session.pop('logged_in', None)
+    return jsonify({"message": "Logged out successfully"}), 200
 
 @app.route('/')
 def index():

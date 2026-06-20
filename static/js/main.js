@@ -62,6 +62,10 @@ function formatPercent(value) {
 async function loadClients() {
     try {
         const response = await fetch('/api/clients');
+        if (response.status === 401) {
+            window.location.href = '/login';
+            return;
+        }
         const clients = await response.json();
         clientsData = clients;
         
@@ -649,6 +653,26 @@ async function viewClientReports(clientId) {
         switchView('report-history');
     } catch (err) {
         console.error("Error showing client reports:", err);
+    }
+}
+
+function cancelReportForm() {
+    // Just return to client history
+    switchView('report-history');
+}
+
+// ----------------- AUTHENTICATION -----------------
+async function logout() {
+    try {
+        const response = await fetch('/api/logout', { method: 'POST' });
+        if (response.ok) {
+            window.location.href = '/login';
+        } else {
+            alert('Failed to log out.');
+        }
+    } catch (err) {
+        console.error("Logout error:", err);
+        alert('An error occurred during logout.');
     }
 }
 
