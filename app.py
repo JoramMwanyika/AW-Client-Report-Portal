@@ -1,7 +1,7 @@
 import os
 import tempfile
 import requests
-from flask import Flask, jsonify, request, send_file, render_template
+from flask import Flask, jsonify, request, send_file, render_template, redirect
 from dotenv import load_dotenv
 import database
 import pdf_generator
@@ -220,13 +220,13 @@ def upload_to_temp_host(filepath):
 
     return None
 
-@app.route('/api/reports/<int:report_id>/export/canva', methods=['POST'])
+@app.route('/api/reports/<int:report_id>/export/canva', methods=['GET'])
 def export_to_canva(report_id):
     try:
         report_type = request.args.get('type', 'sacs')
         report_details = database.get_report_details(report_id)
         if not report_details:
-            return jsonify({"error": "Report not found"}), 404
+            return "Report not found", 404
             
         client = {
             'client1_first_name': report_details['client1_first_name'],
@@ -270,15 +270,12 @@ def export_to_canva(report_id):
         
         if public_pdf_url:
             canva_import_url = f"https://www.canva.com/folder/upload?file_url={public_pdf_url}"
-            return jsonify({
-                "success": True,
-                "canva_url": canva_import_url
-            }), 200
+            return redirect(canva_import_url)
         else:
-            return jsonify({"error": "Failed to generate public URL for Canva import"}), 500
+            return "Failed to generate public URL for Canva import", 500
             
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return f"Error: {str(e)}", 500
 
 
 if __name__ == '__main__':

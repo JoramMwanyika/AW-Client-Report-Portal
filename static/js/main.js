@@ -653,26 +653,6 @@ async function viewClientReports(clientId) {
 }
 
 // CANVA EXPORT TRIGGER
-async function exportToCanva(reportId, type) {
-    const btn = event.target;
-    const oldText = btn.textContent;
-    btn.textContent = "Preparing Canva...";
-    btn.disabled = true;
-    
-    try {
-        const res = await fetch(`/api/reports/${reportId}/export/canva?type=${type}`, { method: 'POST' });
-        const data = await res.json();
-        
-        if (res.ok && data.canva_url) {
-            window.open(data.canva_url, '_blank');
-        } else {
-            alert(data.error || "Failed to prepare Canva export");
-        }
-    } catch (err) {
-        console.error("Canva export error:", err);
-        alert("An error occurred while preparing Canva export.");
-    } finally {
-        btn.textContent = oldText;
-        btn.disabled = false;
-    }
+function exportToCanva(reportId, type) {
+    window.open(`/api/reports/${reportId}/export/canva?type=${type}`, '_blank');
 }
